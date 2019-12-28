@@ -1,8 +1,8 @@
 {
     "name": "bnlambert/phalcon-auth",
     "description": "test",
-    "type": "library",
-    "license": "BSD",
+    "type": "Phalcon Auth",
+    "license": "MIT",
     "authors": [
         {
             "name": "Boyong Nangwei Lambert",
