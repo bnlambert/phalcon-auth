@@ -1,0 +1,18 @@
+{
+    "name": "bnlambert/phalcon-auth",
+    "description": "test",
+    "type": "library",
+    "license": "BSD",
+    "authors": [
+        {
+            "name": "Boyong Nangwei Lambert",
+            "email": "blbnlambert34@gmail.com"
+        }
+    ],
+    "require": {},
+	"autoload": {
+        "psr-4": {
+            "BNLambert\\Phalcon\\Auth\\": "src/"
+        }
+    }
+}
