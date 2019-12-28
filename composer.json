@@ -1,7 +1,7 @@
 {
     "name": "bnlambert/phalcon-auth",
-    "description": "test",
-    "type": "Phalcon Auth",
+    "description": "Phalcon 4.x Auth",
+    "type": "library",
     "license": "MIT",
     "authors": [
         {
