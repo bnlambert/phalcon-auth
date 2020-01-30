@@ -8,20 +8,19 @@
 
 namespace BNLambert\Phalcon\Auth\helpers;
 
+use Phalcon\Di\Injectable;
 
-class Cookies
+class Cookies extends Injectable
 {
-    protected $cookies;
     protected $duration;
     protected $token;
-    protected $request;
-    protected $response;
+    // protected $request;
+    // protected $response;
 
-    public function __construct($cookies, $request, $response)
+    public function __construct()
     {
-        $this->cookies = $cookies;
-        $this->request = $request;
-        $this->response = $response;
+        // $this->request = $request;
+        // $this->response = $response;
     }
 
     /**
@@ -46,8 +45,8 @@ class Cookies
 
     public function confirm($userId)
     {
-        $this->cookies->set('RMU', (string) $userId, $this->duration, '/');
-        $this->cookies->set('RMT', $this->token, $this->duration, '/');
+        $this->cookies->set('RMU', (string) $userId, $this->duration);
+        $this->cookies->set('RMT', $this->token, $this->duration);
         $this->cookies->send();
 
     }

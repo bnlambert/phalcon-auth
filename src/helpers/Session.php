@@ -8,16 +8,11 @@
 
 namespace BNLambert\Phalcon\Auth\helpers;
 
+use Phalcon\Di\Injectable;
 
-class Session
+class Session extends Injectable
 {
-    protected  $session;
-
-    public function __construct($session)
-    {
-        $this->session = $session;
-    }
-
+    
     public function register($user)
     {
         $this->session->set('user', $user);

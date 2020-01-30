@@ -20,14 +20,16 @@ class Config
     public $redirectToIntended;
     public $modelsNamespace;
 
-    public function __construct($params)
+    public function __construct()
     {
+		$params = $this->config->auth;
+		
         $this->modelsNamespace = $params['modelsNamespace'] ?? ['/models'];
         $this->userModel = $params['userModel'] ?? null;
         $this->successModel = $params['successModel'] ?? null;
         $this->failedModel = $params['failedModel'] ?? null;
         $this->rememberModel = $params['rememberModel'] ?? null;
-        $this->cookiesDuration = $params['cookiesDuration'] ?? (86400 * 8);
+        $this->cookiesDuration = $params['cookiesDuration'] ?? time() + (86400 * 8);
     }
 
     public function setUserModel($model)

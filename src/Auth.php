@@ -6,9 +6,8 @@ use BNLambert\Phalcon\Auth\Helpers\Session;
 use BNLambert\Phalcon\Auth\Helpers\Cookies;
 use Phalcon\Security;
 use Phalcon\Loader;
-use Phalcon\Http\Response;
+use Phalcon\Di\Injectable;
 
-use Phalcon\Mvc\Dispatcher;
 /**
 *  A sample class
 *
@@ -17,24 +16,21 @@ use Phalcon\Mvc\Dispatcher;
 *
 *  @author yourname
 */
-class Auth implements AuthInterface {
+class Auth  extends Injectable implements AuthInterface {
 
     protected $config;
-    protected  $session;
-    protected $cookies;
+    protected  $sessionManager;
+    protected $cookiesManager;
     protected $request;
     protected $flash;
     protected $response;
     protected $dispatcher;
 
 
-    public function __construct($di, $configOptions = [])
+    public function __construct($configOptions = [])
     {
-        $this->session = new Session($di['session']);
-        $this->cookies = new Cookies($di['cookies'], $di['request'], $di['response']);
-        $this->request = $di['request'];
-        $this->dispatcher = $di['dispatcher'];
-        $this->response =  $di['response']; // new Response();
+        $this->sessionManager = new Session();
+        $this->cookiesManager = new Cookies();
         $this->config = new Config($configOptions);
 
         // AutoLoad auth models from Phalcon app
@@ -42,33 +38,10 @@ class Auth implements AuthInterface {
         $loader->registerNamespaces($this->config->modelsNamespace);
         $loader->register();
 
-        /*
-        spl_autoload_register(function ($classname) {
-            $filename = APP_PATH . $this->config->modelPath . '/' . $this->modelName($classname) . '.php';
-            require_once($filename);
-        });
-        */
-
 
     }
 
-    /**  @var string $m_SampleProperty define here what this variable is for, do this for every instance variable */
-   private $m_SampleProperty = '';
- 
-  /**
-  * Sample method 
-  *
-  * Always create a corresponding docblock for each method, describing what it is for,
-  * this helps the phpdocumentator to properly generator the documentation
-  *
-  * @param string $param1 A string containing the parameter, do this for each parameter to the function, make sure to make it descriptive
-  *
-  * @return string
-  */
-   public function method1($param1){
-			return "Hello Sam!";
-   }
-
+   
    public function check(array $credentials = [], $flag =[])
    {
        $email = $credentials['email'] ?? null;
@@ -103,20 +76,21 @@ class Auth implements AuthInterface {
        $this->saveSuccessLogin($user);
 
        // Check if the remember me was selected
-       if (isset($credentials['rememberMe']) && $credentials['rememberMe'] == true) {
-           $token = $this->cookies->setRememberMe($user, $this->config->cookiesDuration);
+	   // isset($credentials['rememberMe']) && $credentials['rememberMe'] == true
+       if (true) {
+           $token = $this->cookiesManager->setRememberMe($user, $this->config->cookiesDuration);
 
            $this->saveUserCookiesToken($user, $token);
-           $this->cookies->confirm($user->id);
+           $this->cookiesManager->confirm($user->id);
 
            /*
            if($this->saveUserCookiesToken($user, $token)) {
-               $this->cookies->confirm($user->id);
+               $this->cookiesManager->confirm($user->id);
            }
            */
        }
 
-       $this->session->register($user);
+       $this->sessionManager->register($user);
 
        // return ['error' => 'none'];
 
@@ -200,21 +174,21 @@ class Auth implements AuthInterface {
 
     public function logout()
     {
-        $this->session->clear();
+        $this->sessionManager->clear();
 
-        if ($this->cookies->hasToken()) {
-            $token = $this->cookies->getToken();
+        if ($this->cookiesManager->hasToken()) {
+            $token = $this->cookiesManager->getToken();
             $user = $this->getUserToken($token);
             if ($user) {
                 $user->delete();
             }
-            $this->cookies->forget();
+            $this->cookiesManager->forget();
         }
     }
 
     public function guard()
     {
-        $user = $this->session->getUser();
+        $user = $this->sessionManager->getUser();
 
         if (!is_object($user)) {
 
@@ -248,22 +222,22 @@ class Auth implements AuthInterface {
 
     public function checkSession()
     {
-        $user = $this->session->getUser();
+        $user = $this->sessionManager->getUser();
 
         if (is_object($user)) {
             return $this->response->redirect('/account');
         }
         else {
-            $params = $this->cookies->getSessionParams();
+            $params = $this->cookiesManager->getSessionParams();
 
             if (is_array($params)) {
                 $userToken = $this->getUserToken($params['token']);
 
-                if($params['token'] == $userToken->token && $this->cookies->hasExpired($userToken->created_at, $this->config->cookiesDuration)) {
+                if($params['token'] == $userToken->token && $this->cookiesManager->hasExpired($userToken->created_at, $this->config->cookiesDuration)) {
                     $model = $this->config->userModel;
                     $user = $model::findFirst($params['userId']);
                     $this->saveSuccessLogin($user);
-                    $this->session->register($user);
+                    $this->sessionManager->register($user);
 
 
                     // redirect to intended / default path
@@ -273,7 +247,7 @@ class Auth implements AuthInterface {
                 }
                 else {
 
-                    $this->cookies->forget();
+                    $this->cookiesManager->forget();
                 }
             }
 
