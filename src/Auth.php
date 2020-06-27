@@ -1,57 +1,56 @@
 <?php namespace BNLambert\Phalcon\Auth;
 
 use BNLambert\Phalcon\Auth\Interfaces\AuthInterface;
-use BNLambert\Phalcon\Auth\Helpers\Config;
 use BNLambert\Phalcon\Auth\Helpers\Session;
 use BNLambert\Phalcon\Auth\Helpers\Cookies;
+use BNLambert\Phalcon\Auth\Traits\DBQuery;
 use Phalcon\Security;
 use Phalcon\Loader;
 use Phalcon\Di\Injectable;
 
 /**
-*  A sample class
+*  A Auth class
 *
-*  Use this section to define what this class is doing, the PHPDocumentator will use this
-*  to automatically generate an API documentation using this information.
+*  Implementation of  auth methods
 *
-*  @author yourname
+*  @author BN Lambert
 */
 class Auth  extends Injectable implements AuthInterface {
+    use DBQuery;
 
-    protected $config;
     protected  $sessionManager;
     protected $cookiesManager;
-    protected $request;
-    protected $flash;
-    protected $response;
-    protected $dispatcher;
+    
 
-
-    public function __construct($configOptions = [])
+    public function __construct()
     {
         $this->sessionManager = new Session();
         $this->cookiesManager = new Cookies();
-        $this->config = new Config($configOptions);
+		    $modelsNamespace = json_decode(json_encode($this->config->auth->modelsNamespace), true);
 
         // AutoLoad auth models from Phalcon app
         $loader = new Loader();
-        $loader->registerNamespaces($this->config->modelsNamespace);
+        $loader->registerNamespaces($modelsNamespace);
         $loader->register();
-
-
     }
 
-   
-   public function check(array $credentials = [], $flag =[])
+   /**
+   *
+   */
+   public function check(array $credentials = [], $flags = [])
    {
        $email = $credentials['email'] ?? null;
        $password = $credentials['password'] ?? ' ';
+       $rememberMe = $credentials['rememberMe'] ?? false;
 
-       $model = $this->config->userModel;
+       $model = $this->config->auth->userModel;
 
-       $user = $model::findFirst("email='$email' AND status = 0");
+       $query = $this->makeConditions($this->config->auth->authWith, $credentials, $flags);
 
-       // from here
+       $user = $model::findFirst([
+         'conditions' => $query['conditions'],
+         'bind' => $query['bindParams']
+       ]);
 
        if (is_object($user)) {
            // Check the password
@@ -67,35 +66,22 @@ class Auth  extends Injectable implements AuthInterface {
            return false;
        }
 
-
-
-       // Check if the user was flagged
-       // $this->checkUserFlags($user);
-
        // Register the successful login
        $this->saveSuccessLogin($user);
 
+       
+
        // Check if the remember me was selected
-	   // isset($credentials['rememberMe']) && $credentials['rememberMe'] == true
-       if (true) {
-           $token = $this->cookiesManager->setRememberMe($user, $this->config->cookiesDuration);
+       if ($rememberMe) {
+           $token = $this->cookiesManager->setRememberMe($user, $this->config->auth->cookiesDuration);
 
            $this->saveUserCookiesToken($user, $token);
            $this->cookiesManager->confirm($user->id);
-
-           /*
-           if($this->saveUserCookiesToken($user, $token)) {
-               $this->cookiesManager->confirm($user->id);
-           }
-           */
        }
 
        $this->sessionManager->register($user);
 
-       // return ['error' => 'none'];
-
-       // return true or redirect
-       return $user;
+       return true;
    }
 
 
@@ -112,7 +98,7 @@ class Auth  extends Injectable implements AuthInterface {
 
     public function saveSuccessLogin($user)
     {
-        $model = $this->config->successModel;
+        $model = $this->config->auth->successModel;
 
         $successLogin = new $model();
         $successLogin->user_id = $user->id;
@@ -124,7 +110,7 @@ class Auth  extends Injectable implements AuthInterface {
 
     public function saveUserCookiesToken($user, $token)
     {
-        $model = $this->config->rememberModel;
+        $model = $this->config->auth->rememberModel;
 
         $remember = new $model();
         $remember->user_id = $user->id;
@@ -138,7 +124,7 @@ class Auth  extends Injectable implements AuthInterface {
 
     public function registerUserThrottling($userId)
     {
-        $model = $this->config->failedModel;
+        $model = $this->config->auth->failedModel;
 
         $failedLogin = new $model();
         $failedLogin->user_id = $userId;
@@ -183,6 +169,7 @@ class Auth  extends Injectable implements AuthInterface {
                 $user->delete();
             }
             $this->cookiesManager->forget();
+            $this->user = null;
         }
     }
 
@@ -192,7 +179,7 @@ class Auth  extends Injectable implements AuthInterface {
 
         if (!is_object($user)) {
 
-            $this->response->redirect('/auth');
+            $this->response->redirect($this->config->auth->loginPath);
 
             return false;
         }
@@ -201,23 +188,18 @@ class Auth  extends Injectable implements AuthInterface {
 
     }
 
-    public function alc()
-    {
-
-    }
-
     public function getUserToken($token)
     {
         $model = $this->config->rememberModel;
 
-        $user = $model::findFirst([
+        $userToken = $model::findFirst([
             'conditions' => 'token = :token:',
             'bind'       => [
                 'token' => $token
             ]
         ]);
 
-        return $user;
+        return $userToken;
     }
 
     public function checkSession()
@@ -225,7 +207,7 @@ class Auth  extends Injectable implements AuthInterface {
         $user = $this->sessionManager->getUser();
 
         if (is_object($user)) {
-            return $this->response->redirect('/account');
+            return $this->response->redirect($this->config->auth->redirectTo);
         }
         else {
             $params = $this->cookiesManager->getSessionParams();
@@ -234,15 +216,14 @@ class Auth  extends Injectable implements AuthInterface {
                 $userToken = $this->getUserToken($params['token']);
 
                 if($params['token'] == $userToken->token && $this->cookiesManager->hasExpired($userToken->created_at, $this->config->cookiesDuration)) {
-                    $model = $this->config->userModel;
+                    $model = $this->config->auth->userModel;
                     $user = $model::findFirst($params['userId']);
                     $this->saveSuccessLogin($user);
                     $this->sessionManager->register($user);
-
+                    $this->user = $user;
 
                     // redirect to intended / default path
-
-                    $this->response->redirect('/account');
+                    $this->response->redirect($this->config->auth->redirectTo);
                     return false;
                 }
                 else {
@@ -254,6 +235,11 @@ class Auth  extends Injectable implements AuthInterface {
 
         }
 
+    }
+
+    public function user()
+    {
+        return $this->sessionManager->getUser();
     }
 
 }

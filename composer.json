@@ -9,10 +9,22 @@
             "email": "blbnlambert34@gmail.com"
         }
     ],
-    "require": {},
+    "require": {
+
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.0",
+        "phalcon/incubator-test": "^v1.0.0-alpha.1"
+    },
 	"autoload": {
         "psr-4": {
             "BNLambert\\Phalcon\\Auth\\": "src/"
+
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "BNLambert\\Phalcon\\Auth\\Tests\\": "src/tests/"
         }
     }
 }

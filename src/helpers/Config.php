@@ -8,8 +8,9 @@
 
 namespace BNLambert\Phalcon\Auth\helpers;
 
+use Phalcon\Di\Injectable;
 
-class Config
+class Config extends Injectable
 {
     public $userModel;
     public $successModel;

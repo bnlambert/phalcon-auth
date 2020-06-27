@@ -1,2 +1,5 @@
 # phalcon-auth
-under dev
+
+## Required
+- PHP 7.4
+- Phalcon extension 4

@@ -8,9 +8,9 @@ namespace BNLambert\Phalcon\Auth\Interfaces;
  */
 
 interface AuthInterface {
-    public function check(array $credentials = [], $flag = []);
+    public function check(array $credentials = [], $flags = []);
 
-   //  public function loginUser($userId);
+   //  public function loginByUserId($userId);
 
    //  public function user();
 
